@@ -131,3 +131,7 @@ dist
 
 #DS_Store
 .DS_Store
+
+
+#jpg files
+images/face_images_1000/*
