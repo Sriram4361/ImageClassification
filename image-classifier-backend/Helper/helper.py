@@ -9,7 +9,8 @@ input_bucket_name="1230041516-in-bucket"
 output_bucket_name="1230041516-out-bucket"
 res_queue_name="1230041516-resp-queue"
 req_queue_name="1230041516-req-queue"
-image_id="ami-08230462d0489301b"
+image_id="ami-0d08838056e80ea86"
+app_tier_tag="app-tier-instance"
 
 ec2_client = boto3.client(
         'ec2',
@@ -46,7 +47,6 @@ def get_max_count_of_s3_messages():
         if(rep_count>5 and cur_count>0):
             return cur_count
         print("Approximate number of messages in the s3:", cur_count)
-        time.sleep(1)
         
 def get_max_count_of_sqs_messages():
     
@@ -72,8 +72,8 @@ def get_max_count_of_sqs_messages():
             return cur_count
         elif(rep_count>5 and cur_count>0):
             return cur_count
-        print("Approximate number of messages in the queue:", cur_count)
-        time.sleep(0.5)
+        
+        # print("Approximate number of messages in the queue:", cur_count)
 
 def till_all_messages_consumed():
     queue_url_response = sqs.get_queue_url(QueueName=req_queue_name)
@@ -101,10 +101,10 @@ def purge_sqs_messages():
     queue_url_response = sqs.get_queue_url(QueueName=res_queue_name)
     queue_url = queue_url_response['QueueUrl']
     response = sqs.purge_queue(QueueUrl=queue_url)
-    if response['ResponseMetadata']['HTTPStatusCode'] == 200:
-        print("All messages purged from the queue.")
-    else:
-        print("Failed to purge messages from the queue.")
+    # if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+    #     print("All messages purged from the queue.")
+    # else:
+    #     print("Failed to purge messages from the queue.")
 
     
     
@@ -120,43 +120,63 @@ def create_ec2_instance(tier_num):
                                    'Value': 'app-tier-instance-'+str(tier_num)}]}]
         )
     instance_id = response['Instances'][0]['InstanceId']
-    print(f"Instance {instance_id} created.")
+    # print(f"Instance {instance_id} created.")
     return instance_id
 
 def terminate_ec2_instances(instance_ids):
-    print("-------------------- terminating",target_count," instances-----------------")
+    # print("-------------------- terminating",target_count," instances-----------------")
     response = ec2_client.terminate_instances(
         InstanceIds=instance_ids
     )
-    # for instance in response['TerminatingInstances']:
-    #     print(f"Instance {instance['InstanceId']} is in the process of termination.")
 
 def up_instances(target_count, instances):
-    print("-------------------- creating",target_count," instances-----------------")
     for i in range(target_count):
         id = create_ec2_instance(i+1)
         instances.append(id)
     return instances
 
+def till_all_instances_running(target_count):
+    ec2 = boto3.resource('ec2', aws_region)
+    running_instances=0
+    while(running_instances!=target_count):
+        instances = ec2.instances.filter(
+            Filters=[
+                {'Name': 'tag:Name', 'Values': [app_tier_tag+"*"]},
+                {'Name': 'instance-state-name', 'Values': ['running', 'pending']}
+            ]
+        )
+        running_instances=len(list(instances))
+
 
 while True:
     req_count=get_max_count_of_sqs_messages()
-#     # req_count=get_max_count_of_s3_messages()
+    # print("-------------req_count-------------", req_count)
     instances=[]
-    target_count=2
+    target_count=1
     if req_count==50:
-        target_count=20
+        target_count=19
     elif req_count>=10:
         target_count=10
+    # print("----------target_count--------------", target_count)
     instances=up_instances(target_count, [])
+    # print("----------after_instances_up----------")
+    # till_all_instances_running(target_count)
+    # if(req_count==50):
+    #     time.sleep(20)
+    # else:
+    #     time.sleep(15)
     till_all_messages_consumed()
+    # print("----------all_messages_consumed----------")
     if(req_count==50):
-        time.sleep(10)
+        time.sleep(20)
     else:
-        time.sleep(5)
+        time.sleep(15)
     purge_sqs_messages()
+    print
+    print("----------all_messages_purged----------")
     terminate_ec2_instances(instances)
-    time.sleep(5)
+    
+# till_all_instances_running(10)
     
         
         

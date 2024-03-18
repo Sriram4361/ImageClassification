@@ -45,7 +45,7 @@ def receiveResfromSQS(name):
         response = sqs.receive_message(
             QueueUrl=queue_url,
             MaxNumberOfMessages=1,
-            WaitTimeSeconds=20,
+            # WaitTimeSeconds=20,
             VisibilityTimeout=0,
         )
         messages = response.get('Messages',[])
@@ -57,7 +57,7 @@ def receiveResfromSQS(name):
                 #print(classification)
                 sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)
                 #print(f"Request processed Successfully")
-                time.sleep(1)
+                # time.sleep(1)
                 return classification
         # else:
             #print("No messages in the queue.")
