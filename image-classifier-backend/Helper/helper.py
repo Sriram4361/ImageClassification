@@ -70,10 +70,10 @@ def get_max_count_of_sqs_messages():
         prev_count=cur_count
         if(cur_count==50 and rep_count>2):
             return cur_count
-        elif(rep_count>5 and cur_count>0):
+        elif(cur_count==10 and rep_count>5):
             return cur_count
-        
-        # print("Approximate number of messages in the queue:", cur_count)
+        time.sleep(1)
+        print("Approximate number of messages in the queue:", cur_count)
 
 def till_all_messages_consumed():
     queue_url_response = sqs.get_queue_url(QueueName=req_queue_name)
@@ -150,23 +150,14 @@ def till_all_instances_running(target_count):
 
 while True:
     req_count=get_max_count_of_sqs_messages()
-    # print("-------------req_count-------------", req_count)
     instances=[]
     target_count=1
     if req_count==50:
         target_count=19
     elif req_count>=10:
         target_count=10
-    # print("----------target_count--------------", target_count)
     instances=up_instances(target_count, [])
-    # print("----------after_instances_up----------")
-    # till_all_instances_running(target_count)
-    # if(req_count==50):
-    #     time.sleep(20)
-    # else:
-    #     time.sleep(15)
     till_all_messages_consumed()
-    # print("----------all_messages_consumed----------")
     if(req_count==50):
         time.sleep(20)
     else:
